@@ -14,8 +14,7 @@ use smithay_client_toolkit::{
         client::protocol::{
             wl_output,
             wl_pointer::{self, ButtonState},
-            wl_shm, wl_surface,
-            wl_touch::{self, Event},
+            wl_shm, wl_surface, wl_touch,
         },
         client::{Attached, Main},
         protocols::wlr::unstable::layer_shell::v1::client::{
@@ -202,6 +201,45 @@ impl Surface {
         }
     }
 
+    fn handle_pointer_event(&mut self, event: &wl_pointer::Event) {
+        match event {
+            wl_pointer::Event::Enter {
+                surface_x,
+                surface_y,
+                ..
+            }
+            | wl_pointer::Event::Motion {
+                surface_x,
+                surface_y,
+                ..
+            } => self.pointer_location = Some((*surface_x, *surface_y)),
+            wl_pointer::Event::Button {
+                state: ButtonState::Pressed,
+                ..
+            } => {
+                let mut matching_click_handler = None;
+                for click_target in &self.click_targets {
+                    if let Some(click_position) = self.pointer_location {
+                        if let Some(handler) = click_target.process_click(click_position) {
+                            matching_click_handler = Some(handler);
+                        }
+                    }
+                }
+
+                match matching_click_handler {
+                    Some(ClickHandler::RunCommand(cmd)) => {
+                        match Command::new("/bin/sh").arg("-c").arg(cmd).spawn() {
+                            Ok(_) => (),
+                            Err(e) => eprintln!("{:?}", e),
+                        }
+                    }
+                    None => {}
+                }
+            }
+            _ => {}
+        }
+    }
+
     fn draw(&mut self) {
         let pool = match self.pools.pool() {
             Some(pool) => pool,
@@ -353,6 +391,22 @@ fn main() {
                         // We should be filtering this down so we only pass
                         // the event on to the appropriate surface. TODO
                         surface.1.handle_touch_event(&event);
+                    }
+                });
+            }
+        }
+
+        if let Some(has_ptr) = seat::with_seat_data(&seat, |seat_data| {
+            !seat_data.defunct && seat_data.has_pointer
+        }) {
+            if has_ptr {
+                let touch = seat.get_pointer();
+                let surfaces_handle = surfaces.clone();
+                touch.quick_assign(move |_, event, _| {
+                    for surface in (*surfaces_handle).borrow_mut().iter_mut() {
+                        // We should be filtering this down so we only pass
+                        // the event on to the appropriate surface. TODO
+                        surface.1.handle_pointer_event(&event);
                     }
                 });
             }
