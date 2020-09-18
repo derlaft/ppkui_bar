@@ -1,10 +1,8 @@
 #[derive(Clone)]
 pub struct Args {
-    pub message: String,
+    pub height: u32,
     pub buttons: Vec<ArgButton>,
-    pub message_type: String,
-    pub detailed_message: bool,
-    pub detailed_message_contents: String,
+    pub font: String,
 }
 
 #[derive(Clone)]
@@ -14,38 +12,41 @@ pub struct ArgButton {
 }
 
 pub fn parse(args: impl Iterator<Item = String>) -> Result<Args, String> {
-    let mut message = None;
-    let mut message_type = None;
+    let mut height: u32 = 32;
     let mut buttons = vec![];
-    let mut detailed_message = false;
+    let mut font = String::from("/usr/share/fonts/TTF/Symbola.ttf");
 
     // skip the binary name
     let mut args = args.skip(1);
 
     loop {
         match args.next().as_deref() {
-            Some("-m") | Some("--message") => {
-                let message_arg = args.next();
+            // parse bar height
+            Some("-h") | Some("--height") => {
+                let arg = args.next();
 
-                if message_arg.is_some() {
-                    message = message_arg;
+                if arg.is_some() {
+                    match arg.unwrap().parse::<u32>() {
+                        Ok(value) => {
+                            height = value;
+                        }
+                        Err(err) => return Err(format!("invalid height '{}'", err)),
+                    }
                 } else {
-                    return Err("missing required arg message (-m/--message)".into());
+                    return Err("missing required arg message (-h/--height)".into());
                 }
             }
-            Some("-t") | Some("--type") => {
-                let message_type_arg = args.next();
 
-                if message_type_arg.is_some() {
-                    message_type = message_type_arg;
-                } else {
-                    return Err("missing required arg type (-t/--type)".into());
+            // parse font path
+            Some("-f") | Some("--font") => {
+                let arg = args.next();
+
+                if arg.is_some() {
+                    font = arg.unwrap();
                 }
             }
-            Some("-l") | Some("--detailed-message") => {
-                detailed_message = true;
-            }
-            // For now handle both -b and -B the same
+
+            // parse button command
             Some("-b") | Some("--button") | Some("-B") | Some("--button-no-terminal") => {
                 let text = args.next();
                 let action = args.next();
@@ -61,62 +62,13 @@ pub fn parse(args: impl Iterator<Item = String>) -> Result<Args, String> {
         }
     }
 
-    if let Some(message) = message {
+    if buttons.len() > 0 {
         Ok(Args {
-            message,
+            height,
             buttons,
-            message_type: message_type.unwrap_or_else(|| "error".into()),
-            detailed_message,
-            // This will be read from stdin later if the detailed message
-            // flag was passed.
-            detailed_message_contents: String::new(),
+            font,
         })
     } else {
-        Err("missing required arg message (-m/--message)".into())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::parse;
-
-    #[test]
-    fn no_args() {
-        let input = vec!["waysay".into()];
-
-        assert_eq!(
-            "missing required arg message (-m/--message)",
-            parse(input.into_iter()).err().unwrap(),
-        );
-    }
-
-    #[test]
-    fn unsupported_arg() {
-        let input = vec!["waysay".into(), "--not-a-real-thing".into()];
-
-        assert_eq!(
-            "invalid arg '--not-a-real-thing'",
-            parse(input.into_iter()).err().unwrap(),
-        );
-    }
-
-    #[test]
-    fn message_short_flag() {
-        let input = vec!["waysay".into(), "-m".into(), "hello from waysay".into()];
-
-        let args = parse(input.into_iter()).unwrap();
-        assert_eq!("hello from waysay", args.message,);
-    }
-
-    #[test]
-    fn message_long_flag() {
-        let input = vec![
-            "waysay".into(),
-            "--message".into(),
-            "hello from waysay".into(),
-        ];
-
-        let args = parse(input.into_iter()).unwrap();
-        assert_eq!("hello from waysay", args.message,);
+        Err("bad parameters".into())
     }
 }

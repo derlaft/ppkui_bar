@@ -29,7 +29,7 @@ use smithay_client_toolkit::{
 use std::{
     cell::{Cell, RefCell},
     env,
-    io::{self, Read, Seek, SeekFrom, Write},
+    io::{Read, Seek, SeekFrom, Write},
     process::{self, Command},
     rc::Rc,
 };
@@ -77,8 +77,6 @@ struct ClickTarget {
 
 #[derive(Clone)]
 enum ClickHandler {
-    /// Request to exit
-    Exit,
     /// Run command
     RunCommand(String),
 }
@@ -94,14 +92,14 @@ impl Surface {
         let layer_surface = layer_shell.get_layer_surface(
             &surface,
             Some(&output),
-            zwlr_layer_shell_v1::Layer::Overlay,
-            "example".to_owned(),
+            zwlr_layer_shell_v1::Layer::Top,
+            "panel".to_owned(),
         );
 
-        let height = 32;
+        let height = args.height;
         layer_surface.set_size(0, height);
         layer_surface.set_anchor(
-            zwlr_layer_surface_v1::Anchor::Top
+            zwlr_layer_surface_v1::Anchor::Bottom
                 | zwlr_layer_surface_v1::Anchor::Left
                 | zwlr_layer_surface_v1::Anchor::Right,
         );
@@ -132,14 +130,19 @@ impl Surface {
         // Commit so that the server will send a configure event
         surface.commit();
 
+        let all_fonts = &fontconfig::FontConfig::new()
+            .expect("failed to find font config file")
+            .get_fonts();
+        eprintln!("All fonts: {:?}", all_fonts);
+
         let mut font_data = Vec::new();
         std::fs::File::open(
             &fontconfig::FontConfig::new()
                 .expect("failed to find font config file")
-                // .get_regular_family_fonts("monospace")
                 .get_fonts()
                 .unwrap()
-                .pop()
+                .into_iter()
+                .find(|x| x.to_str().unwrap() == "/usr/share/fonts/TTF/Symbola.ttf")
                 .expect("should find at least one font"),
         )
         .unwrap()
@@ -200,7 +203,6 @@ impl Surface {
                 }
 
                 match matching_click_handler {
-                    Some(ClickHandler::Exit) => self.should_exit = true,
                     Some(ClickHandler::RunCommand(cmd)) => {
                         match Command::new("/bin/sh").arg("-c").arg(cmd).spawn() {
                             Ok(_) => (),
@@ -224,10 +226,7 @@ impl Surface {
         let width = self.dimensions.0 as i32;
         let height = self.dimensions.1 as i32;
 
-        let vertical_padding = 2;
-        let horizontal_padding = 10;
         let text_h = height as f32 / 2.;
-        let text_hh = text_h / 2.;
 
         // First make sure the pool is the right size
         pool.resize((stride * height) as usize).unwrap();
@@ -241,48 +240,30 @@ impl Surface {
             andrew::Endian::native(),
         );
 
-        // Draw background
-        let block = rectangle::Rectangle::new(
-            (0, 0),
-            (width as usize, height as usize),
-            None,
-            Some([255, 200, 0, 0]),
-        );
-        canvas.draw(&block);
-
         // Draw buttons
-        let mut right_most_pixel = width as usize;
+        let mut next_draw_at = 0;
+        let per_button = (width as usize) / self.args.buttons.len();
 
         let mut draw_button = move |text: String, font_data: &[u8], canvas: &mut Canvas| {
             let mut text = text::Text::new((0, 0), FONT_COLOR, font_data, text_h, 1.0, text);
             let text_width = text.get_width();
-            let button_width = text_width + 2 * horizontal_padding;
-            let block_height = height as usize - vertical_padding * 2;
-            let block_pos = (
-                right_most_pixel as usize - button_width - horizontal_padding,
-                vertical_padding,
-            );
+            // let button_width = text_width + 2 * horizontal_padding;
+            let button_width = per_button;
+            let block_height = height as usize;
+            let block_pos = (next_draw_at, 0);
             let text_pos = (
-                block_pos.0 + horizontal_padding,
+                block_pos.0 + (per_button - text_width) / 2,
                 ((block_height as f32 - text_h) / 2.) as usize,
             );
             text.pos = text_pos;
             let size = (button_width as usize, block_height as usize);
-            let block = rectangle::Rectangle::new(block_pos, size, None, Some([255, 100, 0, 0]));
+            let block = rectangle::Rectangle::new(block_pos, size, None, Some([255, 0, 0, 0]));
             canvas.draw(&block);
             canvas.draw(&text);
 
-            right_most_pixel = block_pos.0;
+            next_draw_at += per_button;
             (block_pos, size)
         };
-
-        let (position, size) = draw_button("x".into(), &self.font_data, &mut canvas);
-        let click_target = ClickTarget {
-            position,
-            size,
-            handler: ClickHandler::Exit,
-        };
-        self.click_targets.push(click_target);
 
         for button in self.args.buttons.iter().cloned() {
             let (position, size) = draw_button(button.text, &self.font_data, &mut canvas);
@@ -293,17 +274,6 @@ impl Surface {
             };
             self.click_targets.push(click_target);
         }
-
-        // Draw message
-        let text = text::Text::new(
-            (horizontal_padding, height as usize / 2 - text_hh as usize),
-            FONT_COLOR,
-            &self.font_data,
-            text_h,
-            1.0,
-            &self.args.message,
-        );
-        canvas.draw(&text);
 
         pool.seek(SeekFrom::Start(0)).unwrap();
         pool.write_all(canvas.buffer).unwrap();
@@ -348,7 +318,7 @@ impl ClickTarget {
 }
 
 fn main() {
-    let mut args = match args::parse(env::args()) {
+    let args = match args::parse(env::args()) {
         Ok(args) => args,
         Err(message) => {
             eprintln!("{}", message);
@@ -356,19 +326,6 @@ fn main() {
             process::exit(1);
         }
     };
-
-    if args.detailed_message {
-        let result = io::stdin().read_to_string(&mut args.detailed_message_contents);
-
-        // Don't fail if we can't read this into a string, just print a message
-        // for debugging purposes.
-        if let Err(e) = result {
-            eprintln!("WARN: failed to read detailed message from stdin {}", e);
-        }
-    }
-
-    // TODO
-    // handle type warn vs error
 
     let (env, display, queue) =
         init_default_environment!(Env, fields = [layer_shell: SimpleGlobal::new(),])

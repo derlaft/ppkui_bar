@@ -1,38 +1,28 @@
-# waysay
+# pepekroll-bar
 
-![image](https://user-images.githubusercontent.com/22216761/85361418-b6b90f00-b4d0-11ea-9beb-6ffc34f26253.png)
+![image](https://user-images.githubusercontent.com/852606/93549941-b06cee80-f96a-11ea-8463-6468875be1f1.png)
 
-waysay is a native wayland client for providing desktop notifications. It aims to be a drop in replacement for swaynag.
+pepekroll-bar is a native wayland client for providing a bottom touch bar.
 
 ## Usage
 
 ```bash
-waysay --message "Hello, world!"
-
-# add buttons to allow the user to trigger an action
-waysay --message "Do it?" \
-  --button "Yes" "echo 'I did it'" \
-  --button "No" "echo 'I did not do it'"
+pepekroll-bar -- \
+  -b '⮹' 'echo B1' \
+  -b '🡄' 'echo B2' \
+  -b '🡆' 'echo B3' \
+  -b '⌨' 'echo B4' \
+  --height 64
 ```
-
-To use waysay as a swaynag replacement, add the following line to your sway config:
-
-```
-swaynag_command waysay
-```
-
-## waysay vs swaynag
-
-Most users will be better off using swaynag. Use waysay if you are interested in using Rust to write native wayland clients, and/or you want to support the Rust wayland/GUI ecosystem.
 
 #### Missing features
 
-Several swaynag features have not yet been implemented:
+Several features have not yet been implemented:
 
-* Display of detailed message
-* configuration and theming
+* Configuration and theming
+* Testing on a real pinephone
 
-Overall waysay is quite rough around the edges at this point, although it is usable.
+Overall it is quite rough around the edges at this point, although it is usable.
 
 ## License
 
