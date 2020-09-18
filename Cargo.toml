@@ -1,7 +1,7 @@
 [package]
-name = "waysay"
-version = "0.1.0"
-authors = ["Josh Mcguigan"]
+name = "pepekroll-bar"
+version = "0.0.1"
+authors = ["Aleksei Kharlamov"]
 edition = "2018"
 
 [dependencies]
