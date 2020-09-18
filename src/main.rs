@@ -15,6 +15,7 @@ use smithay_client_toolkit::{
             wl_output,
             wl_pointer::{self, ButtonState},
             wl_shm, wl_surface,
+            wl_touch::{self, Event},
         },
         client::{Attached, Main},
         protocols::wlr::unstable::layer_shell::v1::client::{
@@ -177,22 +178,10 @@ impl Surface {
         }
     }
 
-    fn handle_pointer_event(&mut self, event: &wl_pointer::Event) {
+    fn handle_event(&mut self, event: &wl_touch::Event) {
         match event {
-            wl_pointer::Event::Enter {
-                surface_x,
-                surface_y,
-                ..
-            }
-            | wl_pointer::Event::Motion {
-                surface_x,
-                surface_y,
-                ..
-            } => self.pointer_location = Some((*surface_x, *surface_y)),
-            wl_pointer::Event::Button {
-                state: ButtonState::Pressed,
-                ..
-            } => {
+            wl_touch::Event::Motion { x, y, .. } => self.pointer_location = Some((*x, *y)),
+            wl_touch::Event::Up { .. } => {
                 let mut matching_click_handler = None;
                 for click_target in &self.click_targets {
                     if let Some(click_position) = self.pointer_location {
@@ -360,14 +349,13 @@ fn main() {
             seat_data.has_pointer && !seat_data.defunct
         }) {
             if has_ptr {
-                let pointer = seat.get_pointer();
-                // let surface = window.surface().clone();
+                let touch = seat.get_touch();
                 let surfaces_handle = surfaces.clone();
-                pointer.quick_assign(move |_, event, _| {
+                touch.quick_assign(move |_, event, _| {
                     for surface in (*surfaces_handle).borrow_mut().iter_mut() {
                         // We should be filtering this down so we only pass
                         // the event on to the appropriate surface. TODO
-                        surface.1.handle_pointer_event(&event);
+                        surface.1.handle_event(&event);
                     }
                 });
             }

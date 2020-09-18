@@ -200,6 +200,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "pepekroll-bar"
+version = "0.0.1"
+dependencies = [
+ "andrew 0.3.0 (git+https://github.com/Smithay/andrew)",
+ "byteorder",
+ "smithay-client-toolkit",
+]
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -362,15 +371,6 @@ name = "wayland-sys"
 version = "0.26.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "877b46940c540fbbaa94615b6c5a7be62626271b7e5a739aabcbf7da9ceef673"
-
-[[package]]
-name = "waysay"
-version = "0.1.0"
-dependencies = [
- "andrew 0.3.0 (git+https://github.com/Smithay/andrew)",
- "byteorder",
- "smithay-client-toolkit",
-]
 
 [[package]]
 name = "winapi"
