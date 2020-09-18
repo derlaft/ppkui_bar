@@ -29,7 +29,7 @@ use smithay_client_toolkit::{
 use std::{
     cell::{Cell, RefCell},
     env,
-    io::{Read, Seek, SeekFrom, Write},
+    io::{self, Read, Seek, SeekFrom, Write},
     process::{self, Command},
     rc::Rc,
 };
@@ -523,6 +523,15 @@ fn main() {
         }
 
         display.flush().unwrap();
-        event_loop.dispatch(None, &mut ()).unwrap();
+
+        match event_loop.dispatch(None, &mut ()) {
+            Ok(..) => {}
+            Err(err) => {
+                // err interrupted somehow happens after suspend :/
+                if err.kind() != io::ErrorKind::Interrupted {
+                    panic!("Unexpected dispatch event: {:?}", err);
+                }
+            }
+        }
     }
 }
