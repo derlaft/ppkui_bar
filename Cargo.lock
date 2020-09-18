@@ -9,7 +9,8 @@ checksum = "2b7e4e8cf778db814365e46839949ca74df4efb10e87ba4913e6ec5967ef0285"
 [[package]]
 name = "andrew"
 version = "0.3.0"
-source = "git+https://github.com/Smithay/andrew#5c92d6689f97b2767d483fbf5400270f9c2f46bd"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e1ea80a5089cac999ffd4a91888154076a961d27387b0f7a6cd2d4dddb636b9"
 dependencies = [
  "bitflags",
  "line_drawing",
@@ -22,8 +23,7 @@ dependencies = [
 [[package]]
 name = "andrew"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e1ea80a5089cac999ffd4a91888154076a961d27387b0f7a6cd2d4dddb636b9"
+source = "git+https://github.com/Smithay/andrew#5c92d6689f97b2767d483fbf5400270f9c2f46bd"
 dependencies = [
  "bitflags",
  "line_drawing",

@@ -93,7 +93,7 @@ impl Surface {
         let layer_surface = layer_shell.get_layer_surface(
             &surface,
             Some(&output),
-            zwlr_layer_shell_v1::Layer::Top,
+            zwlr_layer_shell_v1::Layer::Overlay,
             "panel".to_owned(),
         );
 
@@ -450,22 +450,6 @@ fn main() {
     };
 
     for seat in env.get_all_seats() {
-        if let Some(has_ptr) =
-            seat::with_seat_data(&seat, |seat_data| !seat_data.defunct && seat_data.has_touch)
-        {
-            if has_ptr {
-                let touch = seat.get_touch();
-                let surfaces_handle = surfaces.clone();
-                touch.quick_assign(move |_, event, _| {
-                    for surface in (*surfaces_handle).borrow_mut().iter_mut() {
-                        // We should be filtering this down so we only pass
-                        // the event on to the appropriate surface. TODO
-                        surface.1.handle_touch_event(&event);
-                    }
-                });
-            }
-        }
-
         if let Some(has_ptr) = seat::with_seat_data(&seat, |seat_data| {
             !seat_data.defunct && seat_data.has_pointer
         }) {
@@ -477,6 +461,22 @@ fn main() {
                         // We should be filtering this down so we only pass
                         // the event on to the appropriate surface. TODO
                         surface.1.handle_pointer_event(&event);
+                    }
+                });
+            }
+        }
+
+        if let Some(has_ptr) =
+            seat::with_seat_data(&seat, |seat_data| !seat_data.defunct && seat_data.has_touch)
+        {
+            if has_ptr {
+                let touch = seat.get_touch();
+                let surfaces_handle = surfaces.clone();
+                touch.quick_assign(move |_, event, _| {
+                    for surface in (*surfaces_handle).borrow_mut().iter_mut() {
+                        // We should be filtering this down so we only pass
+                        // the event on to the appropriate surface. TODO
+                        surface.1.handle_touch_event(&event);
                     }
                 });
             }
