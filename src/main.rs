@@ -176,8 +176,18 @@ impl Surface {
 
     fn handle_touch_event(&mut self, event: &wl_touch::Event) {
         match event {
-            wl_touch::Event::Motion { x, y, .. } | wl_touch::Event::Down { x, y, .. } => {
+            wl_touch::Event::Cancel => {
+                self.pointer_engaged = false;
+                self.draw();
+            }
+            wl_touch::Event::Down { x, y, .. } => {
+                self.pointer_engaged = true;
                 self.pointer_location = Some((*x, *y));
+                self.draw();
+            }
+            wl_touch::Event::Motion { x, y, .. } => {
+                self.pointer_location = Some((*x, *y));
+                self.draw();
             }
             wl_touch::Event::Up { .. } => {
                 let mut matching_click_handler = None;
@@ -198,6 +208,9 @@ impl Surface {
                     }
                     None => {}
                 }
+
+                self.pointer_engaged = false;
+                self.draw();
             }
             _ => {}
         }
