@@ -63,6 +63,7 @@ struct Surface {
     dimensions: (u32, u32),
     /// X, Y coordinates of current cursor position
     pointer_location: Option<(f64, f64)>,
+    pointer_engaged: bool,
     /// User requested exit
     should_exit: bool,
     click_targets: Vec<ClickTarget>,
@@ -152,6 +153,7 @@ impl Surface {
             pools,
             dimensions: (0, 0),
             pointer_location: None,
+            pointer_engaged: false,
             should_exit: false,
             click_targets: vec![],
             font_data,
@@ -203,6 +205,11 @@ impl Surface {
 
     fn handle_pointer_event(&mut self, event: &wl_pointer::Event) {
         match event {
+            wl_pointer::Event::Leave { .. } => {
+                self.pointer_location = None;
+                self.pointer_engaged = false;
+                self.draw();
+            }
             wl_pointer::Event::Enter {
                 surface_x,
                 surface_y,
@@ -212,29 +219,46 @@ impl Surface {
                 surface_x,
                 surface_y,
                 ..
-            } => self.pointer_location = Some((*surface_x, *surface_y)),
+            } => {
+                self.pointer_location = Some((*surface_x, *surface_y));
+                self.draw();
+            }
             wl_pointer::Event::Button {
                 state: ButtonState::Pressed,
                 ..
             } => {
+                self.pointer_engaged = true;
+                self.draw();
+            }
+            wl_pointer::Event::Button {
+                state: ButtonState::Released,
+                ..
+            } => {
                 let mut matching_click_handler = None;
-                for click_target in &self.click_targets {
-                    if let Some(click_position) = self.pointer_location {
-                        if let Some(handler) = click_target.process_click(click_position) {
-                            matching_click_handler = Some(handler);
-                        }
-                    }
-                }
 
-                match matching_click_handler {
-                    Some(ClickHandler::RunCommand(cmd)) => {
-                        match Command::new("/bin/sh").arg("-c").arg(cmd).spawn() {
-                            Ok(_) => (),
-                            Err(e) => eprintln!("{:?}", e),
+                if self.pointer_engaged {
+                    for click_target in &self.click_targets {
+                        if let Some(click_position) = self.pointer_location {
+                            if let Some(handler) = click_target.process_click(click_position) {
+                                matching_click_handler = Some(handler);
+                            }
                         }
                     }
-                    None => {}
-                }
+
+                    match matching_click_handler {
+                        Some(ClickHandler::RunCommand(cmd)) => {
+                            match Command::new("/bin/sh").arg("-c").arg(cmd).spawn() {
+                                Ok(_) => (),
+                                Err(e) => eprintln!("{:?}", e),
+                            }
+                        }
+                        None => {}
+                    }
+                };
+
+                self.pointer_engaged = false;
+
+                self.draw();
             }
             _ => {}
         }
@@ -268,10 +292,14 @@ impl Surface {
         let mut next_draw_at = 0;
         let per_button = (width as usize) / self.args.buttons.len();
 
-        let mut draw_button = move |text: String, font_data: &[u8], canvas: &mut Canvas| {
+        let mut create_button = move |text: String,
+                                      action: String,
+                                      font_data: &[u8],
+                                      canvas: &mut Canvas,
+                                      pointer_engaged: bool,
+                                      pointer: Option<(f64, f64)>| {
             let mut text = text::Text::new((0, 0), FONT_COLOR, font_data, text_h, 1.0, text);
             let text_width = text.get_width();
-            // let button_width = text_width + 2 * horizontal_padding;
             let button_width = per_button;
             let block_height = height as usize;
             let block_pos = (next_draw_at, 0);
@@ -281,21 +309,50 @@ impl Surface {
             );
             text.pos = text_pos;
             let size = (button_width as usize, block_height as usize);
-            let block = rectangle::Rectangle::new(block_pos, size, None, Some([255, 0, 0, 0]));
+
+            // create a click target
+            let click_target = ClickTarget {
+                position: block_pos,
+                size,
+                handler: ClickHandler::RunCommand(action),
+            };
+
+            // a very ugly way to check if this click target is hovered
+            let hovered = {
+                let mut retval = false;
+                if let Some(click_position) = pointer {
+                    if let Some(..) = click_target.process_click(click_position) {
+                        retval = true;
+                    }
+                };
+                retval && pointer_engaged
+            };
+
+            // TODO make colors configurable
+            let mut color = Some([255, 0, 0, 0]);
+            if hovered {
+                color = Some([255, 64, 64, 64]);
+            };
+
+            let block = rectangle::Rectangle::new(block_pos, size, None, color);
             canvas.draw(&block);
             canvas.draw(&text);
 
             next_draw_at += per_button;
-            (block_pos, size)
+
+            click_target
         };
 
         for button in self.args.buttons.iter().cloned() {
-            let (position, size) = draw_button(button.text, &self.font_data, &mut canvas);
-            let click_target = ClickTarget {
-                position,
-                size,
-                handler: ClickHandler::RunCommand(button.action),
-            };
+            let click_target = create_button(
+                button.text,
+                button.action,
+                &self.font_data,
+                &mut canvas,
+                self.pointer_engaged,
+                self.pointer_location,
+            );
+
             self.click_targets.push(click_target);
         }
 
