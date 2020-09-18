@@ -131,11 +131,6 @@ impl Surface {
         // Commit so that the server will send a configure event
         surface.commit();
 
-        let all_fonts = &fontconfig::FontConfig::new()
-            .expect("failed to find font config file")
-            .get_fonts();
-        eprintln!("All fonts: {:?}", all_fonts);
-
         let mut font_data = Vec::new();
         std::fs::File::open(
             &fontconfig::FontConfig::new()
@@ -178,9 +173,11 @@ impl Surface {
         }
     }
 
-    fn handle_event(&mut self, event: &wl_touch::Event) {
+    fn handle_touch_event(&mut self, event: &wl_touch::Event) {
         match event {
-            wl_touch::Event::Motion { x, y, .. } => self.pointer_location = Some((*x, *y)),
+            wl_touch::Event::Motion { x, y, .. } | wl_touch::Event::Down { x, y, .. } => {
+                self.pointer_location = Some((*x, *y));
+            }
             wl_touch::Event::Up { .. } => {
                 let mut matching_click_handler = None;
                 for click_target in &self.click_targets {
@@ -345,9 +342,9 @@ fn main() {
     };
 
     for seat in env.get_all_seats() {
-        if let Some(has_ptr) = seat::with_seat_data(&seat, |seat_data| {
-            seat_data.has_pointer && !seat_data.defunct
-        }) {
+        if let Some(has_ptr) =
+            seat::with_seat_data(&seat, |seat_data| !seat_data.defunct && seat_data.has_touch)
+        {
             if has_ptr {
                 let touch = seat.get_touch();
                 let surfaces_handle = surfaces.clone();
@@ -355,7 +352,7 @@ fn main() {
                     for surface in (*surfaces_handle).borrow_mut().iter_mut() {
                         // We should be filtering this down so we only pass
                         // the event on to the appropriate surface. TODO
-                        surface.1.handle_event(&event);
+                        surface.1.handle_touch_event(&event);
                     }
                 });
             }
