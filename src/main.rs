@@ -34,8 +34,8 @@ use std::{
     rc::Rc,
 };
 
-mod args;
-use args::Args;
+mod config;
+use config::Config;
 
 const FONT_COLOR: [u8; 4] = [255, 255, 255, 255];
 
@@ -55,7 +55,7 @@ enum RenderEvent {
 }
 
 struct Surface {
-    args: Args,
+    cfg: Config,
     surface: wl_surface::WlSurface,
     layer_surface: Main<zwlr_layer_surface_v1::ZwlrLayerSurfaceV1>,
     next_render_event: Rc<Cell<Option<RenderEvent>>>,
@@ -84,7 +84,7 @@ enum ClickHandler {
 
 impl Surface {
     fn new(
-        args: Args,
+        cfg: Config,
         output: &wl_output::WlOutput,
         surface: wl_surface::WlSurface,
         layer_shell: &Attached<zwlr_layer_shell_v1::ZwlrLayerShellV1>,
@@ -97,7 +97,7 @@ impl Surface {
             "panel".to_owned(),
         );
 
-        let height = args.height;
+        let height = cfg.height;
         layer_surface.set_size(0, height);
         layer_surface.set_anchor(
             zwlr_layer_surface_v1::Anchor::Bottom
@@ -138,7 +138,7 @@ impl Surface {
             .unwrap();
 
         Self {
-            args,
+            cfg,
             surface,
             layer_surface,
             next_render_event,
@@ -295,7 +295,7 @@ impl Surface {
 
         // Draw buttons
         let mut next_draw_at = 0;
-        let per_button = (width as usize) / self.args.buttons.len();
+        let per_button = (width as usize) / self.cfg.buttons.len();
 
         let mut create_button = move |text: String,
                                       action: String,
@@ -348,10 +348,10 @@ impl Surface {
             click_target
         };
 
-        for button in self.args.buttons.iter().cloned() {
+        for button in self.cfg.buttons.iter().cloned() {
             let click_target = create_button(
                 button.text,
-                button.action,
+                button.command,
                 &self.font_data,
                 &mut canvas,
                 self.pointer_engaged,
@@ -404,7 +404,7 @@ impl ClickTarget {
 }
 
 fn main() {
-    let args = match args::parse(env::args()) {
+    let args = match config::parse(env::args()) {
         Ok(args) => args,
         Err(message) => {
             eprintln!("{}", message);

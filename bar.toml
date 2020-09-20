@@ -1,0 +1,26 @@
+height = 32
+font = "./assets/panel.ttf"
+button_color = "TODO"
+button_hover_color = "TODO"
+text_color = "TODO"
+
+[[buttons]]
+text = "A"
+command = "swaymsg kill"
+
+[[buttons]]
+text = "B"
+command = "swaymsg focus prev"
+
+[[buttons]]
+text = "C"
+command = "xterm"
+
+[[buttons]]
+text = "D"
+command = "swaymsg focus next"
+
+[[buttons]]
+text = "E"
+command = "/home/alarm/toggle-keyboard.sh"
+
