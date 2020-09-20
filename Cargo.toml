@@ -1,5 +1,5 @@
 [package]
-name = "ppk_bar"
+name = "ppkui_bar"
 version = "0.0.1"
 authors = ["Aleksei Kharlamov"]
 edition = "2018"

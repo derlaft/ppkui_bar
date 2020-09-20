@@ -249,7 +249,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "pepekroll-bar"
+name = "ppkui_bar"
 version = "0.0.1"
 dependencies = [
  "andrew 0.3.0 (git+https://github.com/Smithay/andrew)",

@@ -1,14 +1,14 @@
-# ppk_bar
+# ppkui_bar
 
 ![screenshot](https://user-images.githubusercontent.com/852606/93707665-e8be2980-fb30-11ea-9d7c-1849d076ef5d.png)
 
 
-ppk_bar is a native wayland client for providing a bottom touch bar.
+ppkui_bar is a native wayland client for providing a bottom touch bar.
 
 ## Usage
 
 ```bash
-ppk_bar --config bar.toml
+ppkui_bar --config bar.toml
 ```
 
 #### Features
