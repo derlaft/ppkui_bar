@@ -1,6 +1,7 @@
 # pepekroll-bar
 
-![screenshot](https://user-images.githubusercontent.com/852606/93707503-7e58b980-fb2f-11ea-8ed3-7de3eda9f8c8.png)
+![screenshot](https://user-images.githubusercontent.com/852606/93707665-e8be2980-fb30-11ea-9d7c-1849d076ef5d.png)
+
 
 pepekroll-bar is a native wayland client for providing a bottom touch bar.
 
