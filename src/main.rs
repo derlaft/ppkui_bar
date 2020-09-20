@@ -1,8 +1,4 @@
-use andrew::{
-    shapes::rectangle,
-    text::{self, fontconfig},
-    Canvas,
-};
+use andrew::{shapes::rectangle, text, Canvas};
 
 use smithay_client_toolkit::{
     default_environment,

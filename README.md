@@ -7,20 +7,20 @@ pepekroll-bar is a native wayland client for providing a bottom touch bar.
 ## Usage
 
 ```bash
-pepekroll-bar -- \
-  -b '⮹' 'echo B1' \
-  -b '🡄' 'echo B2' \
-  -b '🡆' 'echo B3' \
-  -b '⌨' 'echo B4' \
-  --height 64
+pepekroll-bar --config bar.toml
 ```
 
-#### Missing features
+#### Features
+
+* Using a custom font for a very nice and efficient button rendering
+* Configuration file
+* Touch and pointer event handling
+* Command execution
 
 Several features have not yet been implemented:
 
-* Configuration and theming
-* Testing on a real pinephone
+* Theming
+* Using a virtual keyboard protocol to emulate keystrokes instead of command execution (may be a bit faster and efficient)
 
 Overall it is quite rough around the edges at this point, although it is usable.
 
