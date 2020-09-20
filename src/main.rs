@@ -132,18 +132,10 @@ impl Surface {
         surface.commit();
 
         let mut font_data = Vec::new();
-        std::fs::File::open(
-            &fontconfig::FontConfig::new()
-                .expect("failed to find font config file")
-                .get_fonts()
-                .unwrap()
-                .into_iter()
-                .find(|x| x.to_str().unwrap() == "/usr/share/fonts/TTF/Symbola.ttf")
-                .expect("should find at least one font"),
-        )
-        .unwrap()
-        .read_to_end(&mut font_data)
-        .unwrap();
+        std::fs::File::open("./assets/panel.ttf")
+            .unwrap()
+            .read_to_end(&mut font_data)
+            .unwrap();
 
         Self {
             args,
@@ -287,7 +279,7 @@ impl Surface {
         let width = self.dimensions.0 as i32;
         let height = self.dimensions.1 as i32;
 
-        let text_h = height as f32 / 1.2;
+        let text_h = height as f32 / 2.;
 
         // First make sure the pool is the right size
         pool.resize((stride * height) as usize).unwrap();
