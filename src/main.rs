@@ -31,9 +31,7 @@ use std::{
 };
 
 mod config;
-use config::Config;
-
-const FONT_COLOR: [u8; 4] = [255, 255, 255, 255];
+use config::{ColorConfig, Config};
 
 default_environment!(Env,
     fields = [
@@ -52,6 +50,7 @@ enum RenderEvent {
 
 struct Surface {
     cfg: Config,
+    colors: ColorConfig,
     surface: wl_surface::WlSurface,
     layer_surface: Main<zwlr_layer_surface_v1::ZwlrLayerSurfaceV1>,
     next_render_event: Rc<Cell<Option<RenderEvent>>>,
@@ -133,8 +132,11 @@ impl Surface {
             .read_to_end(&mut font_data)
             .unwrap();
 
+        let colors = cfg.get_color_config();
+
         Self {
             cfg,
+            colors,
             surface,
             layer_surface,
             next_render_event,
@@ -293,13 +295,14 @@ impl Surface {
         let mut next_draw_at = 0;
         let per_button = (width as usize) / self.cfg.buttons.len();
 
-        let mut create_button = move |text: String,
+        let mut create_button = move |colors: &ColorConfig,
+                                      text: String,
                                       action: String,
                                       font_data: &[u8],
                                       canvas: &mut Canvas,
                                       pointer_engaged: bool,
                                       pointer: Option<(f64, f64)>| {
-            let mut text = text::Text::new((0, 0), FONT_COLOR, font_data, text_h, 1.0, text);
+            let mut text = text::Text::new((0, 0), colors.text_color, font_data, text_h, 1.0, text);
             let text_width = text.get_width();
             let button_width = per_button;
             let block_height = height as usize;
@@ -330,12 +333,12 @@ impl Surface {
             };
 
             // TODO make colors configurable
-            let mut color = Some([255, 0, 0, 0]);
-            if hovered {
-                color = Some([255, 64, 64, 64]);
+            let color = match hovered {
+                false => colors.button_color,
+                true => colors.button_hover_color,
             };
 
-            let block = rectangle::Rectangle::new(block_pos, size, None, color);
+            let block = rectangle::Rectangle::new(block_pos, size, None, Some(color));
             canvas.draw(&block);
             canvas.draw(&text);
 
@@ -346,6 +349,7 @@ impl Surface {
 
         for button in self.cfg.buttons.iter().cloned() {
             let click_target = create_button(
+                &self.colors,
                 button.text,
                 button.command,
                 &self.font_data,
