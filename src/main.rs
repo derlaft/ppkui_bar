@@ -4,6 +4,8 @@ use andrew::{
     Canvas,
 };
 
+use raqote::*;
+
 use smithay_client_toolkit::{
     default_environment,
     environment::SimpleGlobal,
@@ -26,6 +28,11 @@ use smithay_client_toolkit::{
     WaylandSource,
 };
 
+use font_kit::family_name::FamilyName;
+use font_kit::font::Font;
+use font_kit::properties::Properties;
+use font_kit::source::SystemSource;
+
 use std::{
     cell::{Cell, RefCell},
     env,
@@ -38,6 +45,20 @@ mod args;
 use args::Args;
 
 const FONT_COLOR: [u8; 4] = [255, 255, 255, 255];
+
+const PANEL_BUTTON: SolidSource = SolidSource {
+    r: 255,
+    g: 0,
+    b: 0,
+    a: 255,
+};
+
+const PANEL_BUTTON_HOVER: SolidSource = SolidSource {
+    r: 0,
+    g: 255,
+    b: 0,
+    a: 255,
+};
 
 default_environment!(Env,
     fields = [
@@ -67,7 +88,10 @@ struct Surface {
     /// User requested exit
     should_exit: bool,
     click_targets: Vec<ClickTarget>,
-    font_data: Vec<u8>,
+    font: Font,
+    point_size: f32,
+    /// Raquote buffer
+    canvas: DrawTarget,
 }
 
 struct ClickTarget {
@@ -131,19 +155,11 @@ impl Surface {
         // Commit so that the server will send a configure event
         surface.commit();
 
-        let mut font_data = Vec::new();
-        std::fs::File::open(
-            &fontconfig::FontConfig::new()
-                .expect("failed to find font config file")
-                .get_fonts()
-                .unwrap()
-                .into_iter()
-                .find(|x| x.to_str().unwrap() == "/usr/share/fonts/TTF/Symbola.ttf")
-                .expect("should find at least one font"),
-        )
-        .unwrap()
-        .read_to_end(&mut font_data)
-        .unwrap();
+        let font = SystemSource::new()
+            .select_best_match(&[FamilyName::SansSerif], &Properties::new())
+            .unwrap()
+            .load()
+            .unwrap();
 
         Self {
             args,
@@ -156,7 +172,9 @@ impl Surface {
             pointer_engaged: false,
             should_exit: false,
             click_targets: vec![],
-            font_data,
+            font,
+            point_size: 24.,
+            canvas: DrawTarget::new(0, 0),
         }
     }
 
@@ -167,6 +185,7 @@ impl Surface {
             Some(RenderEvent::Closed) => true,
             Some(RenderEvent::Configure { width, height }) => {
                 self.dimensions = (width, height);
+                self.canvas = DrawTarget::new(self.dimensions.0 as i32, self.dimensions.1 as i32);
                 self.draw();
                 false
             }
@@ -307,8 +326,10 @@ impl Surface {
 
         let mut create_button = move |text: String,
                                       action: String,
-                                      font_data: &[u8],
+                                      font: Font,
+                                      point_size: f32,
                                       canvas: &mut Canvas,
+                                      canvas2: &mut DrawTarget,
                                       pointer_engaged: bool,
                                       pointer: Option<(f64, f64)>| {
             let mut text = text::Text::new((0, 0), FONT_COLOR, font_data, text_h, 1.0, text);
@@ -342,14 +363,14 @@ impl Surface {
             };
 
             // TODO make colors configurable
-            let mut color = Some([255, 0, 0, 0]);
-            if hovered {
-                color = Some([255, 64, 64, 64]);
+            let color = match hovered {
+                false => PANEL_BUTTON,
+                true => PANEL_BUTTON_HOVER,
             };
 
-            let block = rectangle::Rectangle::new(block_pos, size, None, color);
-            canvas.draw(&block);
             canvas.draw(&text);
+
+            draw_rect(canvas2, block_pos, size, color);
 
             next_draw_at += per_button;
 
@@ -362,6 +383,7 @@ impl Surface {
                 button.action,
                 &self.font_data,
                 &mut canvas,
+                &mut self.canvas,
                 self.pointer_engaged,
                 self.pointer_location,
             );
@@ -370,7 +392,8 @@ impl Surface {
         }
 
         pool.seek(SeekFrom::Start(0)).unwrap();
-        pool.write_all(canvas.buffer).unwrap();
+        // pool.write_all(canvas.buffer).unwrap();
+        pool.write_all(self.canvas.get_data_u8()).unwrap();
         pool.flush().unwrap();
 
         // Create a new buffer from the pool
@@ -534,4 +557,20 @@ fn main() {
             }
         }
     }
+}
+
+fn draw_rect(
+    canvas: &mut DrawTarget,
+    pos: (usize, usize),
+    size: (usize, usize),
+    color: SolidSource,
+) {
+    canvas.fill_rect(
+        pos.0 as f32,
+        pos.1 as f32,
+        size.0 as f32,
+        size.1 as f32,
+        &Source::Solid(color),
+        &DrawOptions::new(),
+    );
 }

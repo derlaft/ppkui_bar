@@ -8,3 +8,5 @@ edition = "2018"
 smithay-client-toolkit = { git = "https://github.com/Smithay/client-toolkit" }
 andrew = { git = "https://github.com/Smithay/andrew" }
 byteorder = "1.3.4"
+raqote = "0.8.0"
+font-kit = "0.7.1"
