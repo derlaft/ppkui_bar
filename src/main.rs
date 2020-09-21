@@ -44,6 +44,7 @@ default_environment!(Env,
 
 #[derive(PartialEq, Copy, Clone)]
 enum RenderEvent {
+    Render,
     Configure { width: u32, height: u32 },
     Closed,
 }
@@ -154,6 +155,10 @@ impl Surface {
     /// Returns true if the surface should be dropped.
     fn handle_events(&mut self) -> bool {
         match self.next_render_event.take() {
+            Some(RenderEvent::Render) => {
+                self.draw();
+                false
+            }
             Some(RenderEvent::Closed) => true,
             Some(RenderEvent::Configure { width, height }) => {
                 self.dimensions = (width, height);
@@ -164,55 +169,67 @@ impl Surface {
         }
     }
 
+    fn schedule_redraw(&mut self) {
+        self.next_render_event.set(Some(RenderEvent::Render));
+    }
+
+    fn input_stop_gesture(&mut self) {
+        self.pointer_engaged = false;
+        self.pointer_location = None; // TODO: maybe not
+        self.schedule_redraw();
+    }
+
+    fn input_start_gesture(&mut self, pos: (f64, f64)) {
+        self.pointer_engaged = true;
+        self.pointer_location = Some(pos);
+        self.schedule_redraw();
+    }
+
+    fn input_movement(&mut self, pos: (f64, f64)) {
+        self.pointer_location = Some(pos);
+        self.schedule_redraw();
+    }
+
+    fn input_commit_gesture(&mut self) {
+        self.check_execute_click();
+        self.pointer_engaged = false;
+        self.schedule_redraw();
+    }
+
+    fn check_execute_click(&mut self) {
+        let mut matching_click_handler = None;
+        for click_target in &self.click_targets {
+            if let Some(click_position) = self.pointer_location {
+                if let Some(handler) = click_target.process_click(click_position) {
+                    matching_click_handler = Some(handler);
+                }
+            }
+        }
+
+        match matching_click_handler {
+            Some(ClickHandler::RunCommand(cmd)) => {
+                match Command::new("/bin/sh").arg("-c").arg(cmd).spawn() {
+                    Ok(_) => (),
+                    Err(e) => eprintln!("{:?}", e),
+                }
+            }
+            None => {}
+        }
+    }
+
     fn handle_touch_event(&mut self, event: &wl_touch::Event) {
         match event {
-            wl_touch::Event::Cancel => {
-                self.pointer_engaged = false;
-                self.draw();
-            }
-            wl_touch::Event::Down { x, y, .. } => {
-                self.pointer_engaged = true;
-                self.pointer_location = Some((*x, *y));
-                self.draw();
-            }
-            wl_touch::Event::Motion { x, y, .. } => {
-                self.pointer_location = Some((*x, *y));
-                self.draw();
-            }
-            wl_touch::Event::Up { .. } => {
-                let mut matching_click_handler = None;
-                for click_target in &self.click_targets {
-                    if let Some(click_position) = self.pointer_location {
-                        if let Some(handler) = click_target.process_click(click_position) {
-                            matching_click_handler = Some(handler);
-                        }
-                    }
-                }
-
-                match matching_click_handler {
-                    Some(ClickHandler::RunCommand(cmd)) => {
-                        match Command::new("/bin/sh").arg("-c").arg(cmd).spawn() {
-                            Ok(_) => (),
-                            Err(e) => eprintln!("{:?}", e),
-                        }
-                    }
-                    None => {}
-                }
-
-                self.pointer_engaged = false;
-                self.draw();
-            }
+            wl_touch::Event::Cancel => self.input_stop_gesture(),
+            wl_touch::Event::Down { x, y, .. } => self.input_start_gesture((*x, *y)),
+            wl_touch::Event::Motion { x, y, .. } => self.input_movement((*x, *y)),
+            wl_touch::Event::Up { .. } => self.input_commit_gesture(),
             _ => {}
         }
     }
 
     fn handle_pointer_event(&mut self, event: &wl_pointer::Event) {
         match event {
-            wl_pointer::Event::Leave { .. } => {
-                self.pointer_location = None;
-                self.pointer_engaged = false;
-                self.draw();
-            }
+            wl_pointer::Event::Leave { .. } => self.input_stop_gesture(),
             wl_pointer::Event::Enter {
                 surface_x,
                 surface_y,
@@ -222,47 +239,15 @@ impl Surface {
                 surface_x,
                 surface_y,
                 ..
-            } => {
-                self.pointer_location = Some((*surface_x, *surface_y));
-                self.draw();
-            }
+            } => self.input_movement((*surface_x, *surface_y)),
             wl_pointer::Event::Button {
                 state: ButtonState::Pressed,
                 ..
-            } => {
-                self.pointer_engaged = true;
-                self.draw();
-            }
+            } => self.input_start_gesture(self.pointer_location.unwrap()),
             wl_pointer::Event::Button {
                 state: ButtonState::Released,
                 ..
-            } => {
-                let mut matching_click_handler = None;
-
-                if self.pointer_engaged {
-                    for click_target in &self.click_targets {
-                        if let Some(click_position) = self.pointer_location {
-                            if let Some(handler) = click_target.process_click(click_position) {
-                                matching_click_handler = Some(handler);
-                            }
-                        }
-                    }
-
-                    match matching_click_handler {
-                        Some(ClickHandler::RunCommand(cmd)) => {
-                            match Command::new("/bin/sh").arg("-c").arg(cmd).spawn() {
-                                Ok(_) => (),
-                                Err(e) => eprintln!("{:?}", e),
-                            }
-                        }
-                        None => {}
-                    }
-                };
-
-                self.pointer_engaged = false;
-
-                self.draw();
-            }
+            } => self.input_commit_gesture(),
             _ => {}
         }
     }
