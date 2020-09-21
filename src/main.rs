@@ -208,8 +208,17 @@ impl Surface {
 
         match matching_click_handler {
             Some(ClickHandler::RunCommand(cmd)) => {
-                match Command::new("/bin/sh").arg("-c").arg(cmd).spawn() {
-                    Ok(_) => (),
+                match Command::new("/usr/bin/setsid")
+                    .arg("--fork")
+                    .arg("/bin/sh")
+                    .arg("-c")
+                    .arg(cmd)
+                    .spawn()
+                {
+                    Ok(mut child) => match child.wait() {
+                        Ok(..) => (),
+                        Err(e) => eprintln!("{:?}", e),
+                    },
                     Err(e) => eprintln!("{:?}", e),
                 }
             }

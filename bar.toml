@@ -14,7 +14,7 @@ command = "swaymsg focus prev"
 
 [[buttons]]
 text = "C"
-command = "xterm"
+command = "/home/alarm/home_menu.sh"
 
 [[buttons]]
 text = "D"
