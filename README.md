@@ -22,6 +22,9 @@ ppkui_bar --config bar.toml
 Several features have not yet been implemented:
 
 * Using a virtual keyboard protocol to emulate keystrokes instead of command execution (may be a bit faster and efficient).
+* Multitouch handling?
+* Fix spawning zombie processes.
+* Packaging for some distros.
 
 Overall it is quite rough around the edges at this point, although it is usable.
 
