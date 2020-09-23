@@ -18,7 +18,7 @@ pub struct Config {
     pub buttons: Vec<Button>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ColorConfig {
     pub text_color: [u8; 4],
     pub button_color: [u8; 4],
