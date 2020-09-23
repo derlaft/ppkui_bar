@@ -72,12 +72,6 @@ impl Bar {
 
 impl libwaylandsfpanel::Application for Bar {
     fn new() -> Self {
-        let mut font_data = Vec::new();
-        std::fs::File::open("./assets/panel.ttf")
-            .unwrap()
-            .read_to_end(&mut font_data)
-            .unwrap();
-
         let cfg = match config::parse(env::args()) {
             Ok(args) => args,
             Err(message) => {
@@ -88,6 +82,12 @@ impl libwaylandsfpanel::Application for Bar {
         };
 
         let colors = cfg.get_color_config();
+
+        let mut font_data = Vec::new();
+        std::fs::File::open(cfg.font.clone())
+            .unwrap()
+            .read_to_end(&mut font_data)
+            .unwrap();
 
         Bar {
             height: 32,
@@ -103,7 +103,7 @@ impl libwaylandsfpanel::Application for Bar {
     fn settings(&self) -> libwaylandsfpanel::ApplicationSettings {
         libwaylandsfpanel::ApplicationSettings {
             namespace: String::from("ppkui_bar"),
-            layer: zwlr_layer_shell_v1::Layer::Top,
+            layer: zwlr_layer_shell_v1::Layer::Overlay,
             size: libwaylandsfpanel::WindowSize(0, self.height),
             exclusive_zone: self.height as i32,
             margins: (0, 0, 0, 0),

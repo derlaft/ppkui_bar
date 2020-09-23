@@ -1,5 +1,5 @@
 height = 32
-font = "./assets/panel.ttf"
+font = "/home/alarm/ppkui_bar/assets/panel.ttf"
 button_color = "black"
 button_hover_color = "#404040"
 text_color = "white"
