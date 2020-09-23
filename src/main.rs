@@ -94,7 +94,7 @@ impl libwaylandsfpanel::Application for Bar {
             pointer_engaged: false,
             pointer_location: None,
             click_targets: vec![],
-            font_data: vec![],
+            font_data,
             cfg,
             colors,
         }
@@ -224,7 +224,7 @@ impl libwaylandsfpanel::Application for Bar {
         Some(libwaylandsfpanel::RenderEvent::Render)
     }
     fn input_commit_gesture(&mut self) -> Option<libwaylandsfpanel::RenderEvent> {
-        // self.check_execute_click();
+        self.check_execute_click();
         self.pointer_engaged = false;
         Some(libwaylandsfpanel::RenderEvent::Render)
     }

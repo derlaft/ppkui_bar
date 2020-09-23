@@ -240,8 +240,6 @@ impl<T: Application> Surface<T> {
         let width = self.dimensions.0 as i32;
         let height = self.dimensions.1 as i32;
 
-        let text_h = height as f32 / 2.;
-
         // First make sure the pool is the right size
         pool.resize((stride * height) as usize).unwrap();
 
