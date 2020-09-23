@@ -1,0 +1,8 @@
+button_color = "black"
+button_hover_color = "#404040"
+text_color = "white"
+
+[launcher]
+line_height = 32
+max_lines = 8
+font = "/usr/share/fonts/noto/NotoSans-Regular.ttf"

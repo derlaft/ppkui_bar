@@ -18,21 +18,23 @@ struct Bar {
     click_targets: Vec<ClickTarget>,
     font_data: Vec<u8>,
     cfg: Config,
+    bar_config: BarConfig,
     colors: ColorConfig,
 }
 
 mod config;
-use config::{ColorConfig, Config};
+use config::{BarConfig, ColorConfig, Config};
 
 impl Clone for Bar {
     fn clone(&self) -> Self {
         Bar {
-            height: 32,
+            height: self.height,
             pointer_engaged: false,
             pointer_location: None,
             click_targets: vec![],
             font_data: self.font_data.clone(),
             cfg: self.cfg.clone(),
+            bar_config: self.bar_config.clone(),
             colors: self.colors.clone(),
         }
     }
@@ -72,7 +74,7 @@ impl Bar {
 
 impl libwaylandsfpanel::Application for Bar {
     fn new() -> Self {
-        let cfg = match config::parse(env::args()) {
+        let cfg = match config::parse_bar(env::args()) {
             Ok(args) => args,
             Err(message) => {
                 eprintln!("{}", message);
@@ -83,19 +85,22 @@ impl libwaylandsfpanel::Application for Bar {
 
         let colors = cfg.get_color_config();
 
+        let bar_config = cfg.clone().bar.unwrap();
+
         let mut font_data = Vec::new();
-        std::fs::File::open(cfg.font.clone())
+        std::fs::File::open(bar_config.font.clone())
             .unwrap()
             .read_to_end(&mut font_data)
             .unwrap();
 
         Bar {
-            height: 32,
+            height: bar_config.height,
             pointer_engaged: false,
             pointer_location: None,
             click_targets: vec![],
             font_data,
             cfg,
+            bar_config,
             colors,
         }
     }
@@ -129,7 +134,7 @@ impl libwaylandsfpanel::Application for Bar {
 
         // Draw buttons
         let mut next_draw_at = 0;
-        let per_button = (width as usize) / self.cfg.buttons.len();
+        let per_button = (width as usize) / self.bar_config.buttons.len();
 
         let mut create_button =
             move |colors: &ColorConfig,
@@ -185,7 +190,7 @@ impl libwaylandsfpanel::Application for Bar {
                 click_target
             };
 
-        for button in self.cfg.buttons.iter().cloned() {
+        for button in self.bar_config.buttons.iter().cloned() {
             let click_target = create_button(
                 &self.colors,
                 button.text,

@@ -4,6 +4,14 @@ version = "0.0.1"
 authors = ["Aleksei Kharlamov"]
 edition = "2018"
 
+[[bin]]
+name = "ppkui_bar"
+path = "src/bar.rs"
+
+[[bin]]
+name = "ppkui_menu"
+path = "src/menu.rs"
+
 [dependencies]
 smithay-client-toolkit = { git = "https://github.com/Smithay/client-toolkit" }
 andrew = { git = "https://github.com/Smithay/andrew" }

@@ -45,7 +45,7 @@ pub struct ApplicationSettings {
     pub anchor: zwlr_layer_surface_v1::Anchor,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct PointerPosition(pub f64, pub f64);
 
 #[derive(Clone, Copy)]
