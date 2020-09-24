@@ -8,7 +8,7 @@ use andrew::{shapes::rectangle, text, Canvas};
 
 use std::{
     cmp, env,
-    io::{self, Read, Write},
+    io::{self, prelude::*, Read, Write},
     process,
 };
 
@@ -84,7 +84,7 @@ impl Menu {
 
 impl libwaylandsfpanel::Application for Menu {
     fn new() -> Self {
-        let cfg = match config::parse_menu(env::args()) {
+        let cfg = match parse_menu(env::args()) {
             Ok(args) => args,
             Err(message) => {
                 eprintln!("{}", message);
@@ -97,7 +97,7 @@ impl libwaylandsfpanel::Application for Menu {
 
         let launcher_config = cfg.clone().launcher.unwrap();
 
-        let options = launcher_config.get_options();
+        let options = get_options();
 
         let mut font_data = Vec::new();
         std::fs::File::open(launcher_config.font.clone())
@@ -163,13 +163,13 @@ impl libwaylandsfpanel::Application for Menu {
 
         let mut next_draw_at = -current_offset;
 
-        let mut create_button = move |colors: &ColorConfig,
-                                      label: String,
-                                      font_data: &[u8],
-                                      canvas: &mut Canvas,
-                                      pointer_engaged: bool,
-                                      pointer: Option<libwaylandsfpanel::PointerPosition>,
-                                      next_draw_at: &mut i32| {
+        let create_button = move |colors: &ColorConfig,
+                                  label: String,
+                                  font_data: &[u8],
+                                  canvas: &mut Canvas,
+                                  pointer_engaged: bool,
+                                  pointer: Option<libwaylandsfpanel::PointerPosition>,
+                                  next_draw_at: &mut i32| {
             // first button? nice
 
             // ugh, I don't think we can currently draw stuff out of bounds
@@ -378,6 +378,84 @@ fn is_clicking(
     } else {
         false
     }
+}
+
+pub fn parse_menu(args: impl Iterator<Item = String>) -> Result<Config, String> {
+    let mut config_file = String::from("/etc/ppkui/launcher.conf");
+    let mut prompt = None;
+
+    // skip the binary name
+    let mut args = args.skip(1);
+
+    // parse cmdline arguments
+    loop {
+        match args.next().as_deref() {
+            // config file location
+            Some("-c") | Some("--config") => {
+                let arg = args.next();
+
+                if arg.is_some() {
+                    config_file = arg.unwrap();
+                }
+            }
+
+            // TODO
+            Some("-i") => {}
+
+            // TODO - number of lines
+            Some("-l") | Some("--lines") => {
+                args.next();
+            }
+
+            // TODO - font
+            Some("-fn") => {
+                args.next();
+            }
+
+            Some("-p") | Some("--prompt") => {
+                let arg = args.next();
+
+                if arg.is_some() {
+                    prompt = Some(arg.unwrap());
+                }
+            }
+
+            Some(arg) => return Err(format!("invalid arg '{}'", arg)),
+
+            None => break,
+        }
+    }
+
+    let mut config_data = Vec::new();
+    std::fs::File::open(config_file)
+        .unwrap()
+        .read_to_end(&mut config_data)
+        .unwrap();
+
+    let mut config: Config = toml::from_slice(config_data.as_slice()).unwrap();
+
+    let mut launcher_config = match config.launcher {
+        None => return Err(format!("Launcher section is not present")),
+        Some(x) => x,
+    };
+
+    if launcher_config.font == "" {
+        // TODO
+        launcher_config.font = String::from("sans");
+    };
+
+    if prompt.is_some() {
+        launcher_config.prompt = prompt
+    }
+
+    config.launcher = Some(launcher_config);
+
+    Ok(config)
+}
+
+pub fn get_options() -> Vec<String> {
+    let stdin = io::stdin();
+    stdin.lock().lines().collect::<Result<_, _>>().unwrap()
 }
 
 fn main() {

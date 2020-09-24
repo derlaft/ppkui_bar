@@ -74,7 +74,7 @@ impl Bar {
 
 impl libwaylandsfpanel::Application for Bar {
     fn new() -> Self {
-        let cfg = match config::parse_bar(env::args()) {
+        let cfg = match parse_bar(env::args()) {
             Ok(args) => args,
             Err(message) => {
                 eprintln!("{}", message);
@@ -268,6 +268,56 @@ impl ClickTarget {
             None
         }
     }
+}
+
+pub fn parse_bar(args: impl Iterator<Item = String>) -> Result<Config, String> {
+    let mut config_file = String::from("/etc/ppkui/bar.conf");
+
+    // skip the binary name
+    let mut args = args.skip(1);
+
+    // parse cmdline arguments
+    loop {
+        match args.next().as_deref() {
+            // config file location
+            Some("-c") | Some("--config") => {
+                let arg = args.next();
+
+                if arg.is_some() {
+                    config_file = arg.unwrap();
+                }
+            }
+
+            Some(arg) => return Err(format!("invalid arg '{}'", arg)),
+
+            None => break,
+        }
+    }
+
+    let mut config_data = Vec::new();
+    std::fs::File::open(config_file)
+        .unwrap()
+        .read_to_end(&mut config_data)
+        .unwrap();
+
+    let mut config: Config = toml::from_slice(config_data.as_slice()).unwrap();
+
+    let mut bar_config = match config.bar {
+        None => return Err(format!("Bar section is not present")),
+        Some(x) => x,
+    };
+
+    if bar_config.font == "" {
+        bar_config.font = String::from("./assets/panel.ttf");
+    };
+
+    if bar_config.buttons.len() == 0 {
+        return Err("no buttons defined".into());
+    }
+
+    config.bar = Some(bar_config);
+
+    Ok(config)
 }
 
 fn main() {
