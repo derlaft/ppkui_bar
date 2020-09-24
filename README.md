@@ -27,6 +27,37 @@ Several features have not yet been implemented:
 
 Overall it is quite rough around the edges at this point, although it is usable.
 
+# ppkui_menu
+
+![launcher](https://user-images.githubusercontent.com/852606/94087402-ed732e00-fe0d-11ea-99db-e1220a56549b.png)
+
+ppkui_menu is a dmenu-like native wayland application launcher.
+
+## Usage
+
+```bash
+# example
+(echo A; echo B; echo C) | ppkui_menu --config launcher.toml
+
+# application launcher
+j4-dmenu-desktop --dmenu='ppkui_menu --config '.../launcher.toml --term='xterm'
+```
+
+#### Features
+
+* Reading list of options from `/dev/stdin`
+* Configuration file.
+* Using a font provided in configuration file.
+* Touch and pointer event handling.
+* Touch scrolling.
+
+Several features have not yet been implemented:
+
+* Keyboard input.
+* Finding font by name (full file path is currently required).
+* Displaying prompt messages.
+* Arbitrary text input (critical, required for networkmanager-dmenu).
+
 ## License
 
 Licensed under either of
