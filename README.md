@@ -21,6 +21,7 @@ ppkui_bar --config bar.toml
 
 Several features have not yet been implemented:
 
+* Hardware acceleration, font hinting.
 * Using a virtual keyboard protocol to emulate keystrokes instead of command execution (may be a bit faster and efficient).
 * Multitouch handling?
 * Packaging for some distros.
@@ -54,6 +55,7 @@ j4-dmenu-desktop --dmenu='ppkui_menu --config '.../launcher.toml --term='xterm'
 
 Several features have not yet been implemented:
 
+* Hardware acceleration, font hinting.
 * Keyboard input.
 * Finding font by name (full file path is currently required).
 * Displaying prompt messages.
