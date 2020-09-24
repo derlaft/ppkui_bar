@@ -5,10 +5,12 @@ use smithay_client_toolkit::reexports::protocols::wlr::unstable::layer_shell::v1
 };
 
 use andrew::{shapes::rectangle, text, Canvas};
-use std::cmp;
-use std::env;
-use std::io::Read;
-use std::process;
+
+use std::{
+    cmp, env,
+    io::{self, Read, Write},
+    process,
+};
 
 struct Menu {
     /// current scroll offset
@@ -48,7 +50,36 @@ impl Clone for Menu {
 }
 
 impl Menu {
-    fn check_execute_click(&mut self) {}
+    fn check_execute_click(&mut self) -> bool {
+        let mut matching_click_handler = None;
+
+        if self.pointer_engaged {
+            for click_target in &self.click_targets {
+                if is_clicking(
+                    self.pointer_start,
+                    self.pointer_current,
+                    self.pointer_engaged,
+                ) {
+                    if let Some(handler) = click_target.process_click(self.pointer_current.unwrap())
+                    {
+                        matching_click_handler = Some(handler);
+                    }
+                }
+            }
+
+            match matching_click_handler {
+                Some(ClickHandler::Selected(cmd)) => {
+                    io::stdout().write_all(cmd.as_bytes()).unwrap();
+                    io::stdout().write_all("\n".as_bytes()).unwrap();
+                    io::stdout().flush().unwrap();
+                    return true;
+                }
+                None => {}
+            }
+        };
+
+        false
+    }
 }
 
 impl libwaylandsfpanel::Application for Menu {
@@ -131,7 +162,6 @@ impl libwaylandsfpanel::Application for Menu {
         let current_offset = self.list_offset + swipe_dist;
 
         let mut next_draw_at = -current_offset;
-        let mut buttons_drawn = 0;
 
         let mut create_button = move |colors: &ColorConfig,
                                       label: String,
@@ -149,16 +179,6 @@ impl libwaylandsfpanel::Application for Menu {
                 return None;
             }
             let current_draw_at = *next_draw_at as usize;
-
-            if buttons_drawn == 0 {
-                let block = rectangle::Rectangle::new(
-                    (0, 0),
-                    (width as usize, current_draw_at as usize),
-                    None,
-                    Some(colors.button_color),
-                );
-                canvas.draw(&block);
-            }
 
             let mut text = text::Text::new(
                 (0, 0),
@@ -211,7 +231,6 @@ impl libwaylandsfpanel::Application for Menu {
             canvas.draw(&text);
 
             *next_draw_at += button_height as i32;
-            buttons_drawn += 1;
 
             Some(click_target)
         };
@@ -230,16 +249,6 @@ impl libwaylandsfpanel::Application for Menu {
             if click_target.is_some() {
                 self.click_targets.push(click_target.unwrap());
             }
-        }
-
-        if next_draw_at < height {
-            let block = rectangle::Rectangle::new(
-                (0, next_draw_at as usize),
-                (width as usize, (height - next_draw_at) as usize),
-                None,
-                Some(self.colors.button_color),
-            );
-            canvas.draw(&block);
         }
     }
 
@@ -272,7 +281,9 @@ impl libwaylandsfpanel::Application for Menu {
     }
 
     fn input_commit_gesture(&mut self) -> Option<libwaylandsfpanel::RenderEvent> {
-        self.check_execute_click();
+        if self.check_execute_click() {
+            return Some(libwaylandsfpanel::RenderEvent::Closed);
+        }
 
         if self.pointer_engaged {
             self.list_offset += swipe_distance(
@@ -352,6 +363,20 @@ impl ClickTarget {
         } else {
             None
         }
+    }
+}
+
+fn is_clicking(
+    start: Option<libwaylandsfpanel::PointerPosition>,
+    current: Option<libwaylandsfpanel::PointerPosition>,
+    engaged: bool,
+) -> bool {
+    if start.is_none() || current.is_none() || !engaged {
+        false
+    } else if start.unwrap() == current.unwrap() {
+        true
+    } else {
+        false
     }
 }
 
