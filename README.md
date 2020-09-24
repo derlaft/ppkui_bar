@@ -29,7 +29,8 @@ Overall it is quite rough around the edges at this point, although it is usable.
 
 # ppkui_menu
 
-![launcher](https://user-images.githubusercontent.com/852606/94087402-ed732e00-fe0d-11ea-99db-e1220a56549b.png)
+![screenshot](https://user-images.githubusercontent.com/852606/94087651-9d489b80-fe0e-11ea-932e-e3f79b63a3bc.png)
+
 
 ppkui_menu is a dmenu-like native wayland application launcher.
 
