@@ -1,3 +1,5 @@
+extern crate serde_derive;
+
 use serde_derive::Deserialize;
 
 use std::str::FromStr;
