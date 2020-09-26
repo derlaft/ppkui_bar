@@ -1,6 +1,6 @@
 [package]
 name = "ppkui_bar"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Aleksei Kharlamov"]
 edition = "2018"
 
@@ -13,8 +13,8 @@ name = "ppkui_menu"
 path = "src/menu.rs"
 
 [dependencies]
-smithay-client-toolkit = { git = "https://github.com/Smithay/client-toolkit" }
-andrew = { git = "https://github.com/Smithay/andrew" }
+smithay-client-toolkit = "0.11.0"
+andrew = "0.3.0"
 byteorder = "1.3.4"
 serde = "1.0.97"
 serde_derive = "1.0"
